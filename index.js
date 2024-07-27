@@ -1,4 +1,5 @@
-const express = require("express")
+const express = require("express");
+const bcrypt = require('bcrypt');
 const cors = require("cors")
 const app = express()
 const port = process.env.PORT || 5000;
@@ -34,10 +35,18 @@ async function run() {
     const database = client.db("PaymentApp").collection("registration");
 
     app.post("/registration", async (req,res) => {
-      console.log(req.body)
+      // console.log(req.body)
+      const salt = 10;
       const userData = req.body;
-      const result = await database.insertOne(userData)
-      res.send(result);
+      const {pin,email,status,mobile,name} = userData;
+      const hashPassword = await bcrypt.hash(pin, salt)
+      const allReadyExist = await database.findOne({email : email});
+      if(allReadyExist){
+        return  res.status(422).send({error : "Email allready Exist"});
+      }
+      // console.log(userData)
+      const result = await database.insertOne(userData);
+      res.send({pin : hashPassword,email,status,mobile,name});
     })
     app.get("/registration", async (req,res) => {
       const result = await database.find().toArray()
