@@ -32,7 +32,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const database = client.db("PaymentApp").collection("registration");
+    const registerUser = client.db("PaymentApp").collection("registration");
 
     app.post("/registration", async (req,res) => {
       // console.log(req.body)
@@ -40,17 +40,27 @@ async function run() {
       const userData = req.body;
       const {pin,email,status,mobile,name} = userData;
       const hashPassword = await bcrypt.hash(pin, salt)
-      const allReadyExist = await database.findOne({email : email});
+      const allReadyExist = await registerUser.findOne({email : email});
       if(allReadyExist){
         return  res.status(422).send({error : "Email allready Exist"});
       }
       // console.log(userData)
-      const result = await database.insertOne(userData);
-      res.send({pin : hashPassword,email,status,mobile,name});
-    })
-    app.get("/registration", async (req,res) => {
-      const result = await database.find().toArray()
+      const result = await registerUser.insertOne({pin : hashPassword,email,status,mobile,name});
       res.send(result);
+    })
+    app.post("/login", async (req,res) => {
+      // console.log(req.body)
+      const {password,useremail} = req.body;
+      const resultEmail = await registerUser.findOne({email : useremail});
+      console.log(resultEmail)
+      if(resultEmail){
+        const match = await bcrypt.compare(password, resultEmail.pin);
+        if(!match){
+          res.status(422).send({error : "Invalid details"})
+        }else{
+          res.status(200).send("login success")
+        }
+      }
     })
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
