@@ -4,10 +4,11 @@ const cors = require("cors")
 const app = express()
 const port = process.env.PORT || 5000;
 require("dotenv").config()
+var jwt = require('jsonwebtoken');
 const corsOptions = {
-    origin: ['http://localhost:5173', 'http://localhost:5174'],
-    credentials: true,
-    optionSuccessStatus: 200,
+  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  credentials: true,
+  optionSuccessStatus: 200,
 }
 
 // middleware
@@ -34,33 +35,44 @@ async function run() {
   try {
     const registerUser = client.db("PaymentApp").collection("registration");
 
-    app.post("/registration", async (req,res) => {
+    app.post("/registration", async (req, res) => {
       // console.log(req.body)
       const salt = 10;
       const userData = req.body;
-      const {pin,email,status,mobile,name} = userData;
+      const { pin, email, status, mobile, name } = userData;
       const hashPassword = await bcrypt.hash(pin, salt)
-      const allReadyExist = await registerUser.findOne({email : email});
-      if(allReadyExist){
-        return  res.status(422).send({error : "Email allready Exist"});
+      const allReadyExist = await registerUser.findOne({ email: email });
+      if (allReadyExist) {
+        return res.status(422).send({ error: "Email allready Exist" });
       }
       // console.log(userData)
-      const result = await registerUser.insertOne({pin : hashPassword,email,status,mobile,name});
+      const result = await registerUser.insertOne({ pin: hashPassword, email, status, mobile, name });
       res.send(result);
     })
-    app.post("/login", async (req,res) => {
+    app.post("/login", async (req, res) => {
       // console.log(req.body)
-      const {password,useremail} = req.body;
-      const resultEmail = await registerUser.findOne({email : useremail});
+      const { password, useremail } = req.body;
+      const resultEmail = await registerUser.findOne({ email: useremail });
       console.log(resultEmail)
-      if(resultEmail){
+      if (resultEmail) {
         const match = await bcrypt.compare(password, resultEmail.pin);
-        if(!match){
-          res.status(422).send({error : "Invalid details"})
-        }else{
-          res.status(200).send("login success")
+        if (!match) {
+          res.status(422).send({ error: "Invalid details" })
+        } else {
+          res.status(200).send({ success: "login success", data: resultEmail })
         }
       }
+    })
+    app.post("/jwt", async (req, res) => {
+      const {email} = req.body;
+      console.log("jwt", req.body)
+
+      const token = jwt.sign({email}, 'secret', { expiresIn: '1h' });
+      const result = {
+        token,
+        validUser : req.body
+      }
+      res.status(201).send({status : 201 , result});
     })
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -71,11 +83,11 @@ async function run() {
 }
 run().catch(console.dir);
 
-app.get("/", (req,res) => {
-    res.send('Hello World!')
+app.get("/", (req, res) => {
+  res.send('Hello World!')
 })
 
 
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
+  console.log(`Example app listening on port ${port}`)
 })
