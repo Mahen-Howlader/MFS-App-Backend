@@ -53,26 +53,29 @@ async function run() {
       // console.log(req.body)
       const { password, useremail } = req.body;
       const resultEmail = await registerUser.findOne({ email: useremail });
-      console.log(resultEmail)
+      // console.log(resultEmail)
+
       if (resultEmail) {
+        console.log(resultEmail.pin)
         const match = await bcrypt.compare(password, resultEmail.pin);
         if (!match) {
           res.status(422).send({ error: "Invalid details" })
         } else {
           res.status(200).send({ success: "login success", data: resultEmail })
         }
+      } else {
+        res.status(400).send({ error: "Invalid credentials" })
       }
     })
     app.post("/jwt", async (req, res) => {
-      const {email} = req.body;
-      console.log("jwt", req.body)
+      const { email } = req.body;
 
-      const token = jwt.sign({email}, 'secret', { expiresIn: '1h' });
+      const token = jwt.sign({ email }, 'secret', { expiresIn: '1h' });
       const result = {
         token,
-        validUser : req.body
+        validUser: req.body
       }
-      res.status(201).send({status : 201 , result});
+      res.status(201).send({ status: 201, result });
     })
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
